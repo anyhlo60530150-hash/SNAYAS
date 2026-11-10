@@ -1,5 +1,5 @@
 # Usamos una imagen oficial y ligera de Python
-FROM python:3.11-slim
+FROM python:3.12
 
 # Directorio de trabajo dentro del contenedor
 WORKDIR /app
@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Comando por defecto al iniciar el contenedor (mantiene vivo el contenedor para desarrollo)
-CMD ["python", "src/main.py"]
+CMD ["python", "app/src/main.py"]
