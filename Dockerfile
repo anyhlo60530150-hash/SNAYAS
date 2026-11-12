@@ -4,8 +4,12 @@ FROM python:3.12
 # Directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Instalamos dependencias del sistema si fuera necesario (opcional)
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# 1. Instalamos git Y las librerías gráficas necesarias para PySide6 (libGL y glib)
+RUN apt-get update && apt-get install -y \
+    git \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copiamos e instalamos las dependencias de Python
 COPY requirements.txt .
