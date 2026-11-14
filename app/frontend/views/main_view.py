@@ -60,25 +60,22 @@ class MainWindow(QMainWindow):
         logo.setObjectName("logo")
         menu_layout.addWidget(logo)
 
-        btn_dashboard = QPushButton("Panel de Control")
+        btn_red = QPushButton("Panel de Red")
         btn_devices = QPushButton("Dispositivos")
-        btn_alerts = QPushButton("Alertas")
-        btn_analytics = QPushButton("Analisis")
-        btn_settings = QPushButton("Configuracion")
+        btn_ssh = QPushButton("Conexion SSH")
+        btn_telnet = QPushButton("Conexion TELNET")
 
         for boton in [
-            btn_dashboard,
+            btn_red,
             btn_devices,
-            btn_alerts,
-            btn_analytics,
-            btn_settings
+            btn_ssh,
+            btn_telnet
         ]:
             boton.setObjectName("menuButton")
             boton.setCursor(Qt.CursorShape.PointingHandCursor)
             menu_layout.addWidget(boton)
 
         menu_layout.addStretch()
-
         version = QLabel("Version 1.0")
         version.setObjectName("version")
         menu_layout.addWidget(version)
