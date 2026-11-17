@@ -1,3 +1,4 @@
+
 import threading
 
 from PySide6.QtWidgets import (
@@ -12,8 +13,12 @@ from PySide6.QtWidgets import (
     QFrame,
     QSizePolicy,
     QTableWidgetItem,
-    QMessageBox
+    QMessageBox,
+    QStackedWidget,
+    QLineEdit,
+    QTextEdit
 )
+
 from PySide6.QtCore import Qt
 
 from app.frontend.stylesheet.style import obtener_estilos
@@ -30,7 +35,6 @@ class MainWindow(QMainWindow):
         self.resize(1100, 700)
         self.setMinimumSize(800, 550)
 
-        # 1. Inicializar variables de estado que faltaban
         self.worker = None
         self.detener_evento = threading.Event()
         self.ips_detectadas = set()
@@ -39,6 +43,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(obtener_estilos())
 
     def init_ui(self):
+
         # CONTENEDOR PRINCIPAL
         central = QWidget()
         self.setCentralWidget(central)
@@ -60,35 +65,79 @@ class MainWindow(QMainWindow):
         logo.setObjectName("logo")
         menu_layout.addWidget(logo)
 
-        btn_red = QPushButton("Panel de Red")
-        btn_devices = QPushButton("Dispositivos")
-        btn_ssh = QPushButton("Conexion SSH")
-        btn_telnet = QPushButton("Conexion TELNET")
+        self.btn_red = QPushButton("Panel de Red")
+        self.btn_devices = QPushButton("Dispositivos")
+        self.btn_ssh = QPushButton("Conexion SSH")
+        self.btn_telnet = QPushButton("Conexion TELNET")
 
-        for boton in [
-            btn_red,
-            btn_devices,
-            btn_ssh,
-            btn_telnet
-        ]:
+        botones_menu = [
+            self.btn_red,
+            self.btn_devices,
+            self.btn_ssh,
+            self.btn_telnet
+        ]
+
+        for boton in botones_menu:
             boton.setObjectName("menuButton")
             boton.setCursor(Qt.CursorShape.PointingHandCursor)
             menu_layout.addWidget(boton)
 
         menu_layout.addStretch()
+
         version = QLabel("Version 1.0")
         version.setObjectName("version")
         menu_layout.addWidget(version)
 
-        # CONTENIDO PRINCIPAL
+        # PANEL DE NAVEGACION
+        self.paneles = QStackedWidget()
+
+        self.panel_red = self.crear_panel_red()
+        self.panel_dispositivos = self.crear_panel_dispositivos()
+        self.panel_ssh = self.crear_panel_ssh()
+        self.panel_telnet = self.crear_panel_telnet()
+
+        self.paneles.addWidget(self.panel_red)
+        self.paneles.addWidget(self.panel_dispositivos)
+        self.paneles.addWidget(self.panel_ssh)
+        self.paneles.addWidget(self.panel_telnet)
+
+        # CONECTAR BOTONES
+        self.btn_red.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+
+        self.btn_devices.clicked.connect(
+            lambda: self.cambiar_panel(1)
+        )
+
+        self.btn_ssh.clicked.connect(
+            lambda: self.cambiar_panel(2)
+        )
+
+        self.btn_telnet.clicked.connect(
+            lambda: self.cambiar_panel(3)
+        )
+
+        # AGREGAR MENU Y PANELES
+        principal.addWidget(menu)
+        principal.addWidget(self.paneles, 1)
+
+    # CAMBIAR ENTRE PANELES
+
+    def cambiar_panel(self, indice):
+        self.paneles.setCurrentIndex(indice)
+
+    # PANEL PRINCIPAL DE RED
+
+    def crear_panel_red(self):
+
         contenido = QWidget()
         contenido.setObjectName("contenido")
 
-        contenido_layout = QVBoxLayout(contenido)
-        contenido_layout.setContentsMargins(25, 25, 25, 25)
-        contenido_layout.setSpacing(20)
+        layout = QVBoxLayout(contenido)
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(20)
 
-        # ENCABEZADO
         encabezado = QHBoxLayout()
 
         titulo = QLabel("Panel de Red")
@@ -101,79 +150,88 @@ class MainWindow(QMainWindow):
         encabezado.addStretch()
         encabezado.addWidget(estado)
 
-        contenido_layout.addLayout(encabezado)
+        layout.addLayout(encabezado)
 
-        # TARJETAS DE INFORMACION
+        # TARJETAS
         tarjetas = QHBoxLayout()
         tarjetas.setSpacing(15)
 
-        # PRIMERA TARJETA
         tarjeta1 = QFrame()
         tarjeta1.setObjectName("tarjeta")
         layout1 = QVBoxLayout(tarjeta1)
+
         texto1 = QLabel("Dispositivos Conectados")
         texto1.setObjectName("textoTarjeta")
+
         self.numero_dispositivos = QLabel("0")
         self.numero_dispositivos.setObjectName("numeroTarjeta")
+
         layout1.addWidget(texto1)
         layout1.addWidget(self.numero_dispositivos)
 
-        # SEGUNDA TARJETA
         tarjeta2 = QFrame()
         tarjeta2.setObjectName("tarjeta")
         layout2 = QVBoxLayout(tarjeta2)
+
         texto2 = QLabel("Alertas Activas")
         texto2.setObjectName("textoTarjeta")
+
         self.numero_alertas = QLabel("0")
         self.numero_alertas.setObjectName("numeroTarjeta")
+
         layout2.addWidget(texto2)
         layout2.addWidget(self.numero_alertas)
 
-        # TERCERA TARJETA
         tarjeta3 = QFrame()
         tarjeta3.setObjectName("tarjeta")
         layout3 = QVBoxLayout(tarjeta3)
+
         texto3 = QLabel("Estado De La Red")
         texto3.setObjectName("textoTarjeta")
+
         self.estado_red = QLabel("Esperando...")
         self.estado_red.setObjectName("numeroTarjeta")
+
         layout3.addWidget(texto3)
         layout3.addWidget(self.estado_red)
 
         tarjetas.addWidget(tarjeta1)
         tarjetas.addWidget(tarjeta2)
         tarjetas.addWidget(tarjeta3)
-        contenido_layout.addLayout(tarjetas)
 
-        # 2. Guardar titulo_tabla como atributo de clase (self)
+        layout.addLayout(tarjetas)
+
         self.titulo_tabla = QLabel("Dispositivos de Red")
         self.titulo_tabla.setObjectName("subtitulo")
-        contenido_layout.addWidget(self.titulo_tabla)
 
-        # TABLA
+        layout.addWidget(self.titulo_tabla)
+
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(4)
+
         self.tabla.setHorizontalHeaderLabels([
             "Nombre del Dispositivo",
             "Direccion IP",
             "Estado",
             "Tipo"
         ])
+
         self.tabla.setRowCount(0)
 
-        encabezado_tabla = self.tabla.horizontalHeader()
-        encabezado_tabla.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.tabla.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
 
         self.tabla.verticalHeader().setVisible(False)
         self.tabla.setAlternatingRowColors(True)
+
         self.tabla.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding
         )
 
-        contenido_layout.addWidget(self.tabla)
+        layout.addWidget(self.tabla)
 
-        # 3. Guardar botones con self y conectar sus señales clicked
         botones = QHBoxLayout()
 
         self.btn_actualizar = QPushButton("Limpiar tabla")
@@ -188,31 +246,208 @@ class MainWindow(QMainWindow):
         botones.addWidget(self.btn_actualizar)
         botones.addWidget(self.btn_escanear)
 
-        contenido_layout.addLayout(botones)
+        layout.addLayout(botones)
 
-        # AGREGAR MENU Y CONTENIDO
-        principal.addWidget(menu)
-        principal.addWidget(contenido, 1)
+        return contenido
 
-    # 4. Método al nivel correcto de indentación (fuera de init_ui)
+    # PANEL DE DISPOSITIVOS
+
+    def crear_panel_dispositivos(self):
+
+        panel = QWidget()
+        panel.setObjectName("contenido")
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(20)
+
+        titulo = QLabel("Dispositivos Conectados")
+        titulo.setObjectName("titulo")
+
+        descripcion = QLabel(
+            "Visualizacion de los dispositivos identificados en la red"
+        )
+
+        layout.addWidget(titulo)
+        layout.addWidget(descripcion)
+
+        self.tabla_dispositivos = QTableWidget()
+        self.tabla_dispositivos.setColumnCount(4)
+
+        self.tabla_dispositivos.setHorizontalHeaderLabels([
+            "Nombre",
+            "Direccion IP",
+            "Estado",
+            "Tipo"
+        ])
+
+        self.tabla_dispositivos.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+
+        self.tabla_dispositivos.verticalHeader().setVisible(False)
+        self.tabla_dispositivos.setAlternatingRowColors(True)
+
+        layout.addWidget(self.tabla_dispositivos)
+
+        self.btn_volver_dispositivos = QPushButton("Volver al panel principal")
+        self.btn_volver_dispositivos.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+
+        layout.addWidget(self.btn_volver_dispositivos)
+
+        return panel
+
+    # PANEL DE CONEXION SSH
+
+    def crear_panel_ssh(self):
+
+        panel = QWidget()
+        panel.setObjectName("contenido")
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(20)
+
+        titulo = QLabel("Conexion SSH")
+        titulo.setObjectName("titulo")
+
+        descripcion = QLabel(
+            "Panel de administracion de conexiones SSH"
+        )
+
+        layout.addWidget(titulo)
+        layout.addWidget(descripcion)
+
+        self.ssh_ip = QLineEdit()
+        self.ssh_ip.setPlaceholderText("Direccion IP")
+
+        self.ssh_puerto = QLineEdit()
+        self.ssh_puerto.setPlaceholderText("Puerto (22)")
+        self.ssh_puerto.setText("22")
+
+        self.ssh_usuario = QLineEdit()
+        self.ssh_usuario.setPlaceholderText("Usuario")
+
+        self.ssh_salida = QTextEdit()
+        self.ssh_salida.setReadOnly(True)
+        self.ssh_salida.setPlaceholderText(
+            "Informacion de la conexion SSH..."
+        )
+
+        layout.addWidget(QLabel("Direccion IP:"))
+        layout.addWidget(self.ssh_ip)
+
+        layout.addWidget(QLabel("Puerto:"))
+        layout.addWidget(self.ssh_puerto)
+
+        layout.addWidget(QLabel("Usuario:"))
+        layout.addWidget(self.ssh_usuario)
+
+        layout.addWidget(QLabel("Informacion de conexion:"))
+        layout.addWidget(self.ssh_salida)
+
+        self.btn_volver_ssh = QPushButton("Volver al panel principal")
+        self.btn_volver_ssh.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+
+        layout.addWidget(self.btn_volver_ssh)
+
+        return panel
+
+    # PANEL DE CONEXION TELNET
+
+    def crear_panel_telnet(self):
+
+        panel = QWidget()
+        panel.setObjectName("contenido")
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(20)
+
+        titulo = QLabel("Conexion TELNET")
+        titulo.setObjectName("titulo")
+
+        descripcion = QLabel(
+            "Panel de administracion de conexiones TELNET"
+        )
+
+        layout.addWidget(titulo)
+        layout.addWidget(descripcion)
+
+        self.telnet_ip = QLineEdit()
+        self.telnet_ip.setPlaceholderText("Direccion IP")
+
+        self.telnet_puerto = QLineEdit()
+        self.telnet_puerto.setPlaceholderText("Puerto (23)")
+        self.telnet_puerto.setText("23")
+
+        self.telnet_usuario = QLineEdit()
+        self.telnet_usuario.setPlaceholderText("Usuario")
+
+        self.telnet_salida = QTextEdit()
+        self.telnet_salida.setReadOnly(True)
+        self.telnet_salida.setPlaceholderText(
+            "Informacion de la conexion TELNET..."
+        )
+
+        layout.addWidget(QLabel("Direccion IP:"))
+        layout.addWidget(self.telnet_ip)
+
+        layout.addWidget(QLabel("Puerto:"))
+        layout.addWidget(self.telnet_puerto)
+
+        layout.addWidget(QLabel("Usuario:"))
+        layout.addWidget(self.telnet_usuario)
+
+        layout.addWidget(QLabel("Informacion de conexion:"))
+        layout.addWidget(self.telnet_salida)
+
+        self.btn_volver_telnet = QPushButton(
+            "Volver al panel principal"
+        )
+
+        self.btn_volver_telnet.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+
+        layout.addWidget(self.btn_volver_telnet)
+
+        return panel
+
+    # ESCANEO DE RED
+
     def alternar_sniffer(self):
-        """Inicia o detiene el sniffer al pulsar el botón."""
+
         if self.worker is not None and self.worker.isRunning():
+
             self.detener_evento.set()
             self.btn_escanear.setEnabled(False)
             self.btn_escanear.setText("Deteniendo...")
             self.estado_red.setText("Deteniendo...")
+
         else:
             self.iniciar_sniffer()
 
     def iniciar_sniffer(self):
+
         self.detener_evento.clear()
         self.ips_detectadas.clear()
 
-        self.titulo_tabla.setText("Tráfico de Red en Tiempo Real")
+        self.titulo_tabla.setText(
+            "Trafico de Red en Tiempo Real"
+        )
+
         self.tabla.setHorizontalHeaderLabels([
-            "IP Origen", "IP Destino", "Protocolo", "Longitud (Bytes)"
+            "IP Origen",
+            "IP Destino",
+            "Protocolo",
+            "Longitud (Bytes)"
         ])
+
         self.tabla.setRowCount(0)
 
         self.worker = NetworkWorker(
@@ -222,55 +457,86 @@ class MainWindow(QMainWindow):
             filtro="ip"
         )
 
-        self.worker.kwargs["callback_paquete"] = self.worker.progreso_dato.emit
+        self.worker.kwargs["callback_paquete"] = (
+            self.worker.progreso_dato.emit
+        )
 
-        self.worker.progreso_dato.connect(self.agregar_paquete_a_tabla)
-        self.worker.error_ocurrido.connect(self.manejar_error_sniffer)
-        self.worker.finished.connect(self.al_finalizar_sniffer)
+        self.worker.progreso_dato.connect(
+            self.agregar_paquete_a_tabla
+        )
+
+        self.worker.error_ocurrido.connect(
+            self.manejar_error_sniffer
+        )
+
+        self.worker.finished.connect(
+            self.al_finalizar_sniffer
+        )
 
         self.btn_escanear.setText("Detener escaneo")
         self.estado_red.setText("Capturando...")
+
         self.worker.start()
 
     def agregar_paquete_a_tabla(self, info: dict):
-        """Se ejecuta en el hilo principal cada vez que Scapy captura un paquete."""
+
         self.tabla.insertRow(0)
-        self.tabla.setItem(0, 0, QTableWidgetItem(info["origen"]))
-        self.tabla.setItem(0, 1, QTableWidgetItem(info["destino"]))
-        self.tabla.setItem(0, 2, QTableWidgetItem(info["protocolo"]))
-        self.tabla.setItem(0, 3, QTableWidgetItem(info["longitud"]))
+
+        self.tabla.setItem(
+            0, 0, QTableWidgetItem(info["origen"])
+        )
+
+        self.tabla.setItem(
+            0, 1, QTableWidgetItem(info["destino"])
+        )
+
+        self.tabla.setItem(
+            0, 2, QTableWidgetItem(info["protocolo"])
+        )
+
+        self.tabla.setItem(
+            0, 3, QTableWidgetItem(info["longitud"])
+        )
 
         if self.tabla.rowCount() > 500:
             self.tabla.removeRow(500)
 
         for ip in (info["origen"], info["destino"]):
+
             if ip != "N/A":
                 self.ips_detectadas.add(ip)
-        self.numero_dispositivos.setText(str(len(self.ips_detectadas)))
+
+        self.numero_dispositivos.setText(
+            str(len(self.ips_detectadas))
+        )
 
     def al_finalizar_sniffer(self):
-        """Se ejecuta automáticamente cuando el QThread termina."""
+
         self.btn_escanear.setEnabled(True)
         self.btn_escanear.setText("Escanear red")
         self.estado_red.setText("Detenido")
 
     def manejar_error_sniffer(self, mensaje_error: str):
-        """Muestra errores (por ejemplo, si falta ejecutar como Administrador/root)."""
+
         QMessageBox.critical(
             self,
             "Error de Captura",
             f"No se pudo iniciar el sniffer:\n{mensaje_error}\n\n"
-            "Asegúrate de ejecutar el programa como Administrador/root y tener Npcap instalado."
+            "Asegurate de ejecutar el programa como Administrador/root "
+            "y tener Npcap instalado."
         )
 
     def limpiar_tabla(self):
+
         self.tabla.setRowCount(0)
         self.ips_detectadas.clear()
         self.numero_dispositivos.setText("0")
 
     def closeEvent(self, event):
-        """Si el usuario cierra la ventana mientras escanea, detiene el hilo limpiamente."""
+
         if self.worker is not None and self.worker.isRunning():
+
             self.detener_evento.set()
             self.worker.wait(1500)
+
         event.accept()

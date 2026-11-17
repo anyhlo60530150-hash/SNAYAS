@@ -1,3 +1,4 @@
+
 def obtener_estilos():
     return """
         QWidget {
@@ -78,6 +79,8 @@ def obtener_estilos():
             color: white;
         }
 
+        /* TABLAS */
+
         QTableWidget {
             background-color: #1E293B;
             alternate-background-color: #253449;
@@ -101,6 +104,68 @@ def obtener_estilos():
             padding: 10px;
         }
 
+        /* CAMPOS DE TEXTO */
+
+        QLineEdit {
+            background-color: #1E293B;
+            color: #E5E7EB;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        QLineEdit:focus {
+            border: 1px solid #38BDF8;
+        }
+
+        QLineEdit:disabled {
+            background-color: #0F172A;
+            color: #64748B;
+        }
+
+        /* AREA DE INFORMACION */
+
+        QTextEdit {
+            background-color: #1E293B;
+            color: #E5E7EB;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        QTextEdit:focus {
+            border: 1px solid #38BDF8;
+        }
+
+        /* BOTONES */
+
+        QPushButton {
+            background-color: #1E293B;
+            color: #38BDF8;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            padding: 10px 15px;
+            font-size: 13px;
+        }
+
+        QPushButton:hover {
+            background-color: #075985;
+            color: white;
+            border: 1px solid #38BDF8;
+        }
+
+        QPushButton:pressed {
+            background-color: #0C4A6E;
+        }
+
+        QPushButton:disabled {
+            background-color: #0F172A;
+            color: #64748B;
+            border: 1px solid #334155;
+        }
+
         #actualizar, #escanear {
             background-color: #1E293B;
             color: #38BDF8;
@@ -112,9 +177,5 @@ def obtener_estilos():
         #actualizar:hover, #escanear:hover {
             background-color: #075985;
             color: white;
-        }
-
-        QPushButton {
-            font-size: 13px;
         }
     """
