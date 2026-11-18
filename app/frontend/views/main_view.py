@@ -14,9 +14,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QTableWidgetItem,
     QMessageBox,
-    QStackedWidget,
-    QLineEdit,
-    QTextEdit
+    QStackedWidget
 )
 
 from PySide6.QtCore import Qt
@@ -24,6 +22,8 @@ from PySide6.QtCore import Qt
 from app.frontend.stylesheet.style import obtener_estilos
 from app.backend.workers import NetworkWorker
 from app.backend.sniffer import capturar_trafico_continuo
+from app.frontend.views.ssh_view import SSHView
+from app.frontend.views.telnet_view import TelnetView
 
 
 class MainWindow(QMainWindow):
@@ -88,20 +88,20 @@ class MainWindow(QMainWindow):
         version.setObjectName("version")
         menu_layout.addWidget(version)
 
-        # PANEL DE NAVEGACION
+        # PANELES DE NAVEGACION
         self.paneles = QStackedWidget()
 
         self.panel_red = self.crear_panel_red()
         self.panel_dispositivos = self.crear_panel_dispositivos()
-        self.panel_ssh = self.crear_panel_ssh()
-        self.panel_telnet = self.crear_panel_telnet()
+        self.panel_ssh = SSHView()
+        self.panel_telnet = TelnetView()
 
         self.paneles.addWidget(self.panel_red)
         self.paneles.addWidget(self.panel_dispositivos)
         self.paneles.addWidget(self.panel_ssh)
         self.paneles.addWidget(self.panel_telnet)
 
-        # CONECTAR BOTONES
+        # CONECTAR BOTONES DEL MENU
         self.btn_red.clicked.connect(
             lambda: self.cambiar_panel(0)
         )
@@ -118,17 +118,24 @@ class MainWindow(QMainWindow):
             lambda: self.cambiar_panel(3)
         )
 
+        # BOTONES VOLVER
+        self.panel_ssh.btn_volver.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+
+        self.panel_telnet.btn_volver.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+
         # AGREGAR MENU Y PANELES
         principal.addWidget(menu)
         principal.addWidget(self.paneles, 1)
 
     # CAMBIAR ENTRE PANELES
-
     def cambiar_panel(self, indice):
         self.paneles.setCurrentIndex(indice)
 
     # PANEL PRINCIPAL DE RED
-
     def crear_panel_red(self):
 
         contenido = QWidget()
@@ -251,7 +258,6 @@ class MainWindow(QMainWindow):
         return contenido
 
     # PANEL DE DISPOSITIVOS
-
     def crear_panel_dispositivos(self):
 
         panel = QWidget()
@@ -290,7 +296,10 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self.tabla_dispositivos)
 
-        self.btn_volver_dispositivos = QPushButton("Volver al panel principal")
+        self.btn_volver_dispositivos = QPushButton(
+            "Volver al panel principal"
+        )
+
         self.btn_volver_dispositivos.clicked.connect(
             lambda: self.cambiar_panel(0)
         )
@@ -299,127 +308,7 @@ class MainWindow(QMainWindow):
 
         return panel
 
-    # PANEL DE CONEXION SSH
-
-    def crear_panel_ssh(self):
-
-        panel = QWidget()
-        panel.setObjectName("contenido")
-
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(25, 25, 25, 25)
-        layout.setSpacing(20)
-
-        titulo = QLabel("Conexion SSH")
-        titulo.setObjectName("titulo")
-
-        descripcion = QLabel(
-            "Panel de administracion de conexiones SSH"
-        )
-
-        layout.addWidget(titulo)
-        layout.addWidget(descripcion)
-
-        self.ssh_ip = QLineEdit()
-        self.ssh_ip.setPlaceholderText("Direccion IP")
-
-        self.ssh_puerto = QLineEdit()
-        self.ssh_puerto.setPlaceholderText("Puerto (22)")
-        self.ssh_puerto.setText("22")
-
-        self.ssh_usuario = QLineEdit()
-        self.ssh_usuario.setPlaceholderText("Usuario")
-
-        self.ssh_salida = QTextEdit()
-        self.ssh_salida.setReadOnly(True)
-        self.ssh_salida.setPlaceholderText(
-            "Informacion de la conexion SSH..."
-        )
-
-        layout.addWidget(QLabel("Direccion IP:"))
-        layout.addWidget(self.ssh_ip)
-
-        layout.addWidget(QLabel("Puerto:"))
-        layout.addWidget(self.ssh_puerto)
-
-        layout.addWidget(QLabel("Usuario:"))
-        layout.addWidget(self.ssh_usuario)
-
-        layout.addWidget(QLabel("Informacion de conexion:"))
-        layout.addWidget(self.ssh_salida)
-
-        self.btn_volver_ssh = QPushButton("Volver al panel principal")
-        self.btn_volver_ssh.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
-
-        layout.addWidget(self.btn_volver_ssh)
-
-        return panel
-
-    # PANEL DE CONEXION TELNET
-
-    def crear_panel_telnet(self):
-
-        panel = QWidget()
-        panel.setObjectName("contenido")
-
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(25, 25, 25, 25)
-        layout.setSpacing(20)
-
-        titulo = QLabel("Conexion TELNET")
-        titulo.setObjectName("titulo")
-
-        descripcion = QLabel(
-            "Panel de administracion de conexiones TELNET"
-        )
-
-        layout.addWidget(titulo)
-        layout.addWidget(descripcion)
-
-        self.telnet_ip = QLineEdit()
-        self.telnet_ip.setPlaceholderText("Direccion IP")
-
-        self.telnet_puerto = QLineEdit()
-        self.telnet_puerto.setPlaceholderText("Puerto (23)")
-        self.telnet_puerto.setText("23")
-
-        self.telnet_usuario = QLineEdit()
-        self.telnet_usuario.setPlaceholderText("Usuario")
-
-        self.telnet_salida = QTextEdit()
-        self.telnet_salida.setReadOnly(True)
-        self.telnet_salida.setPlaceholderText(
-            "Informacion de la conexion TELNET..."
-        )
-
-        layout.addWidget(QLabel("Direccion IP:"))
-        layout.addWidget(self.telnet_ip)
-
-        layout.addWidget(QLabel("Puerto:"))
-        layout.addWidget(self.telnet_puerto)
-
-        layout.addWidget(QLabel("Usuario:"))
-        layout.addWidget(self.telnet_usuario)
-
-        layout.addWidget(QLabel("Informacion de conexion:"))
-        layout.addWidget(self.telnet_salida)
-
-        self.btn_volver_telnet = QPushButton(
-            "Volver al panel principal"
-        )
-
-        self.btn_volver_telnet.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
-
-        layout.addWidget(self.btn_volver_telnet)
-
-        return panel
-
     # ESCANEO DE RED
-
     def alternar_sniffer(self):
 
         if self.worker is not None and self.worker.isRunning():
