@@ -25,6 +25,7 @@ from app.backend.sniffer import capturar_trafico_continuo
 from app.frontend.views.ssh_view import SSHView
 from app.frontend.views.telnet_view import TelnetView
 from app.frontend.views.device_view import DeviceView
+from app.frontend.views.ftp_view import FTPView
 
 
 class MainWindow(QMainWindow):
@@ -70,12 +71,14 @@ class MainWindow(QMainWindow):
         self.btn_devices = QPushButton("Dispositivos")
         self.btn_ssh = QPushButton("Conexion SSH")
         self.btn_telnet = QPushButton("Conexion TELNET")
+        self.btn_ftp = QPushButton("Transferencia FTP")
 
         botones_menu = [
             self.btn_red,
             self.btn_devices,
             self.btn_ssh,
-            self.btn_telnet
+            self.btn_telnet,
+            self.btn_ftp
         ]
 
         for boton in botones_menu:
@@ -96,51 +99,26 @@ class MainWindow(QMainWindow):
         self.panel_dispositivos = DeviceView()
         self.panel_ssh = SSHView()
         self.panel_telnet = TelnetView()
-        self.panel_ssh.btn_volver.clicked.connect(
-            lambda: self.cambiar_panel(0)
-            )
-            
-        self.panel_telnet.btn_volver.clicked.connect(
-            lambda: self.cambiar_panel(0)
-            )
-            
-        self.panel_dispositivos.btn_volver.clicked.connect(
-            lambda: self.cambiar_panel(0)
-            )
+        self.panel_ftp = FTPView()  
 
-        self.paneles.addWidget(self.panel_red)
-        self.paneles.addWidget(self.panel_dispositivos)
-        self.paneles.addWidget(self.panel_ssh)
-        self.paneles.addWidget(self.panel_telnet)
+        self.paneles.addWidget(self.panel_red)          
+        self.paneles.addWidget(self.panel_dispositivos) 
+        self.paneles.addWidget(self.panel_ssh)          
+        self.paneles.addWidget(self.panel_telnet)       
+        self.paneles.addWidget(self.panel_ftp)          
 
         # CONECTAR BOTONES DEL MENU
-        self.btn_red.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
+        self.btn_red.clicked.connect(lambda: self.cambiar_panel(0))
+        self.btn_devices.clicked.connect(lambda: self.cambiar_panel(1))
+        self.btn_ssh.clicked.connect(lambda: self.cambiar_panel(2))
+        self.btn_telnet.clicked.connect(lambda: self.cambiar_panel(3))
+        self.btn_ftp.clicked.connect(lambda: self.cambiar_panel(4))  
 
-        self.btn_devices.clicked.connect(
-            lambda: self.cambiar_panel(1)
-        )
-
-        self.btn_ssh.clicked.connect(
-            lambda: self.cambiar_panel(2)
-        )
-
-        self.btn_telnet.clicked.connect(
-            lambda: self.cambiar_panel(3)
-        )
-
-        # BOTONES VOLVER
-        self.panel_ssh.btn_volver.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
-
-        self.panel_telnet.btn_volver.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
-        self.panel_dispositivos.btn_volver.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
+        # BOTONES VOLVER (en un solo bloque limpio)
+        self.panel_dispositivos.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
+        self.panel_ssh.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
+        self.panel_telnet.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
+        self.panel_ftp.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
 
         # AGREGAR MENU Y PANELES
         principal.addWidget(menu)
