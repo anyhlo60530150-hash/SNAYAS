@@ -24,6 +24,7 @@ from app.backend.workers import NetworkWorker
 from app.backend.sniffer import capturar_trafico_continuo
 from app.frontend.views.ssh_view import SSHView
 from app.frontend.views.telnet_view import TelnetView
+from app.frontend.views.device_view import DeviceView
 
 
 class MainWindow(QMainWindow):
@@ -92,9 +93,20 @@ class MainWindow(QMainWindow):
         self.paneles = QStackedWidget()
 
         self.panel_red = self.crear_panel_red()
-        self.panel_dispositivos = self.crear_panel_dispositivos()
+        self.panel_dispositivos = DeviceView()
         self.panel_ssh = SSHView()
         self.panel_telnet = TelnetView()
+        self.panel_ssh.btn_volver.clicked.connect(
+            lambda: self.cambiar_panel(0)
+            )
+            
+        self.panel_telnet.btn_volver.clicked.connect(
+            lambda: self.cambiar_panel(0)
+            )
+            
+        self.panel_dispositivos.btn_volver.clicked.connect(
+            lambda: self.cambiar_panel(0)
+            )
 
         self.paneles.addWidget(self.panel_red)
         self.paneles.addWidget(self.panel_dispositivos)
@@ -124,6 +136,9 @@ class MainWindow(QMainWindow):
         )
 
         self.panel_telnet.btn_volver.clicked.connect(
+            lambda: self.cambiar_panel(0)
+        )
+        self.panel_dispositivos.btn_volver.clicked.connect(
             lambda: self.cambiar_panel(0)
         )
 
@@ -256,57 +271,6 @@ class MainWindow(QMainWindow):
         layout.addLayout(botones)
 
         return contenido
-
-    # PANEL DE DISPOSITIVOS
-    def crear_panel_dispositivos(self):
-
-        panel = QWidget()
-        panel.setObjectName("contenido")
-
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(25, 25, 25, 25)
-        layout.setSpacing(20)
-
-        titulo = QLabel("Dispositivos Conectados")
-        titulo.setObjectName("titulo")
-
-        descripcion = QLabel(
-            "Visualizacion de los dispositivos identificados en la red"
-        )
-
-        layout.addWidget(titulo)
-        layout.addWidget(descripcion)
-
-        self.tabla_dispositivos = QTableWidget()
-        self.tabla_dispositivos.setColumnCount(4)
-
-        self.tabla_dispositivos.setHorizontalHeaderLabels([
-            "Nombre",
-            "Direccion IP",
-            "Estado",
-            "Tipo"
-        ])
-
-        self.tabla_dispositivos.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
-
-        self.tabla_dispositivos.verticalHeader().setVisible(False)
-        self.tabla_dispositivos.setAlternatingRowColors(True)
-
-        layout.addWidget(self.tabla_dispositivos)
-
-        self.btn_volver_dispositivos = QPushButton(
-            "Volver al panel principal"
-        )
-
-        self.btn_volver_dispositivos.clicked.connect(
-            lambda: self.cambiar_panel(0)
-        )
-
-        layout.addWidget(self.btn_volver_dispositivos)
-
-        return panel
 
     # ESCANEO DE RED
     def alternar_sniffer(self):
