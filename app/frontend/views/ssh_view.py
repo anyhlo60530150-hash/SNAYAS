@@ -86,10 +86,17 @@ class SSHView(QWidget):
         self.informacion.append(f"$ {cmd}\nConectando a {host}...")
 
         self.worker = NetworkWorker(ejecutar_ssh, host, puerto, usuario, password, cmd)
-        self.worker.resultado.connect(self.mostrar_resultado)
+        self.worker.resultado_listo.connect(self.mostrar_resultado)
+        self.worker.error_ocurrido.connect(self.mostrar_error)
+        
         self.worker.start()
 
-    def mostrar_resultado(self, exito, mensaje):
+    def mostrar_resultado(self, resultado):
+        exito, mensaje = resultado
         self.btn_ejecutar.setEnabled(True)
         estado = "[OK]" if exito else "[ERROR]"
         self.informacion.append(f"{estado}\n{mensaje}\n" + "-" * 40)
+        
+    def mostrar_error(self, error):
+        self.btn_ejecutar.setEnabled(True)
+        self.informacion.append(f"[ERROR]\n{error}")
