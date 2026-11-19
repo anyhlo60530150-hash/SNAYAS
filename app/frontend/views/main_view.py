@@ -1,6 +1,8 @@
 
 import threading
 
+from app.backend.jarvis import JarvisWorker
+
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -43,6 +45,15 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
         self.setStyleSheet(obtener_estilos())
+
+        self.worker = None
+        self.detener_evento = threading.Event()
+        self.ips_detectadas = set()
+
+        self.init_ui()
+        self.setStyleSheet(obtener_estilos())
+
+        self.iniciar_jarvis()
 
     def init_ui(self):
 
@@ -363,10 +374,56 @@ class MainWindow(QMainWindow):
         self.ips_detectadas.clear()
         self.numero_dispositivos.setText("0")
 
+
+
+    def iniciar_jarvis(self):
+        self.jarvis = JarvisWorker(palabra_activacion="jarvis")
+        self.jarvis.comando_detectado.connect(self.ejecutar_comando_jarvis)
+        self.jarvis.estado_cambiado.connect(self.actualizar_estado_jarvis)
+        self.jarvis.start()
+
+    def actualizar_estado_jarvis(self, mensaje: str):
+    
+        self.statusBar().showMessage(mensaje)
+
+    def ejecutar_comando_jarvis(self, accion: str, params: dict):
+        """Enruta las órdenes de voz hacia los métodos existentes de tus vistas."""
+        if accion == "cambiar_panel":
+            self.cambiar_panel(params["indice"])
+
+        elif accion == "escanear_dispositivos":
+            self.cambiar_panel(1)  
+            self.panel_dispositivos.iniciar_escaneo()
+
+        elif accion == "iniciar_sniffer":
+            self.cambiar_panel(0)  
+            if self.worker is None or not self.worker.isRunning():
+                self.iniciar_sniffer()
+
+        elif accion == "detener_sniffer":
+            if self.worker is not None and self.worker.isRunning():
+                self.alternar_sniffer()
+
+        elif accion == "limpiar_tabla":
+            self.limpiar_tabla()
+
+        elif accion == "ejecutar_ssh":
+            self.cambiar_panel(2)
+            self.panel_ssh.enviar_comando()
+
+        elif accion == "ejecutar_telnet":
+            self.cambiar_panel(3)
+            self.panel_telnet.enviar_comando()
+
+        elif accion == "subir_ftp":
+            self.cambiar_panel(4)
+            self.panel_ftp.iniciar_subida()    
+
     def closeEvent(self, event):
+        if hasattr(self, "jarvis") and self.jarvis.isRunning():
+            self.jarvis.detener()
 
         if self.worker is not None and self.worker.isRunning():
-
             self.detener_evento.set()
             self.worker.wait(1500)
 
