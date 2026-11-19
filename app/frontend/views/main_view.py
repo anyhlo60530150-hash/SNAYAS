@@ -1,7 +1,4 @@
-
 import threading
-
-from app.backend.jarvis import JarvisWorker
 
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -18,9 +15,9 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QStackedWidget
 )
-
 from PySide6.QtCore import Qt
 
+from app.backend.jarvis import JarvisWorker
 from app.frontend.stylesheet.style import obtener_estilos
 from app.backend.workers import NetworkWorker
 from app.backend.sniffer import capturar_trafico_continuo
@@ -45,13 +42,9 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
         self.setStyleSheet(obtener_estilos())
-
-
         self.iniciar_jarvis()
 
     def init_ui(self):
-
-        # CONTENEDOR PRINCIPAL
         central = QWidget()
         self.setCentralWidget(central)
 
@@ -104,38 +97,34 @@ class MainWindow(QMainWindow):
         self.panel_dispositivos = DeviceView()
         self.panel_ssh = SSHView()
         self.panel_telnet = TelnetView()
-        self.panel_ftp = FTPView()  
+        self.panel_ftp = FTPView()
 
-        self.paneles.addWidget(self.panel_red)          
-        self.paneles.addWidget(self.panel_dispositivos) 
-        self.paneles.addWidget(self.panel_ssh)          
-        self.paneles.addWidget(self.panel_telnet)       
-        self.paneles.addWidget(self.panel_ftp)          
+        self.paneles.addWidget(self.panel_red)
+        self.paneles.addWidget(self.panel_dispositivos)
+        self.paneles.addWidget(self.panel_ssh)
+        self.paneles.addWidget(self.panel_telnet)
+        self.paneles.addWidget(self.panel_ftp)
 
         # CONECTAR BOTONES DEL MENU
         self.btn_red.clicked.connect(lambda: self.cambiar_panel(0))
         self.btn_devices.clicked.connect(lambda: self.cambiar_panel(1))
         self.btn_ssh.clicked.connect(lambda: self.cambiar_panel(2))
         self.btn_telnet.clicked.connect(lambda: self.cambiar_panel(3))
-        self.btn_ftp.clicked.connect(lambda: self.cambiar_panel(4))  
+        self.btn_ftp.clicked.connect(lambda: self.cambiar_panel(4))
 
-        # BOTONES VOLVER (en un solo bloque limpio)
+        # BOTONES VOLVER
         self.panel_dispositivos.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
         self.panel_ssh.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
         self.panel_telnet.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
         self.panel_ftp.btn_volver.clicked.connect(lambda: self.cambiar_panel(0))
 
-        # AGREGAR MENU Y PANELES
         principal.addWidget(menu)
         principal.addWidget(self.paneles, 1)
 
-    # CAMBIAR ENTRE PANELES
     def cambiar_panel(self, indice):
         self.paneles.setCurrentIndex(indice)
 
-    # PANEL PRINCIPAL DE RED
     def crear_panel_red(self):
-
         contenido = QWidget()
         contenido.setObjectName("contenido")
 
@@ -208,32 +197,21 @@ class MainWindow(QMainWindow):
 
         self.titulo_tabla = QLabel("Dispositivos de Red")
         self.titulo_tabla.setObjectName("subtitulo")
-
         layout.addWidget(self.titulo_tabla)
 
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(4)
-
         self.tabla.setHorizontalHeaderLabels([
             "Nombre del Dispositivo",
             "Direccion IP",
             "Estado",
             "Tipo"
         ])
-
         self.tabla.setRowCount(0)
-
-        self.tabla.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
-
+        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla.verticalHeader().setVisible(False)
         self.tabla.setAlternatingRowColors(True)
-
-        self.tabla.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding
-        )
+        self.tabla.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         layout.addWidget(self.tabla)
 
@@ -257,33 +235,25 @@ class MainWindow(QMainWindow):
 
     # ESCANEO DE RED
     def alternar_sniffer(self):
-
         if self.worker is not None and self.worker.isRunning():
-
             self.detener_evento.set()
             self.btn_escanear.setEnabled(False)
             self.btn_escanear.setText("Deteniendo...")
             self.estado_red.setText("Deteniendo...")
-
         else:
             self.iniciar_sniffer()
 
     def iniciar_sniffer(self):
-
         self.detener_evento.clear()
         self.ips_detectadas.clear()
 
-        self.titulo_tabla.setText(
-            "Trafico de Red en Tiempo Real"
-        )
-
+        self.titulo_tabla.setText("Trafico de Red en Tiempo Real")
         self.tabla.setHorizontalHeaderLabels([
             "IP Origen",
             "IP Destino",
             "Protocolo",
             "Longitud (Bytes)"
         ])
-
         self.tabla.setRowCount(0)
 
         self.worker = NetworkWorker(
@@ -293,21 +263,10 @@ class MainWindow(QMainWindow):
             filtro="ip"
         )
 
-        self.worker.kwargs["callback_paquete"] = (
-            self.worker.progreso_dato.emit
-        )
-
-        self.worker.progreso_dato.connect(
-            self.agregar_paquete_a_tabla
-        )
-
-        self.worker.error_ocurrido.connect(
-            self.manejar_error_sniffer
-        )
-
-        self.worker.finished.connect(
-            self.al_finalizar_sniffer
-        )
+        self.worker.kwargs["callback_paquete"] = self.worker.progreso_dato.emit
+        self.worker.progreso_dato.connect(self.agregar_paquete_a_tabla)
+        self.worker.error_ocurrido.connect(self.manejar_error_sniffer)
+        self.worker.finished.connect(self.al_finalizar_sniffer)
 
         self.btn_escanear.setText("Detener escaneo")
         self.estado_red.setText("Capturando...")
@@ -315,61 +274,32 @@ class MainWindow(QMainWindow):
         self.worker.start()
 
     def agregar_paquete_a_tabla(self, info: dict):
-
         self.tabla.insertRow(0)
-
-        self.tabla.setItem(
-            0, 0, QTableWidgetItem(info["origen"])
-        )
-
-        self.tabla.setItem(
-            0, 1, QTableWidgetItem(info["destino"])
-        )
-
-        self.tabla.setItem(
-            0, 2, QTableWidgetItem(info["protocolo"])
-        )
-
-        self.tabla.setItem(
-            0, 3, QTableWidgetItem(info["longitud"])
-        )
+        self.tabla.setItem(0, 0, QTableWidgetItem(info["origen"]))
+        self.tabla.setItem(0, 1, QTableWidgetItem(info["destino"]))
+        self.tabla.setItem(0, 2, QTableWidgetItem(info["protocolo"]))
+        self.tabla.setItem(0, 3, QTableWidgetItem(info["longitud"]))
 
         if self.tabla.rowCount() > 500:
             self.tabla.removeRow(500)
 
         for ip in (info["origen"], info["destino"]):
-
             if ip != "N/A":
                 self.ips_detectadas.add(ip)
 
-        self.numero_dispositivos.setText(
-            str(len(self.ips_detectadas))
-        )
+        self.numero_dispositivos.setText(str(len(self.ips_detectadas)))
 
     def al_finalizar_sniffer(self):
-
         self.btn_escanear.setEnabled(True)
         self.btn_escanear.setText("Escanear red")
         self.estado_red.setText("Detenido")
 
-    def manejar_error_sniffer(self, mensaje_error: str):
-
-        QMessageBox.critical(
-            self,
-            "Error de Captura",
-            f"No se pudo iniciar el sniffer:\n{mensaje_error}\n\n"
-            "Asegurate de ejecutar el programa como Administrador/root "
-            "y tener Npcap instalado."
-        )
-
     def limpiar_tabla(self):
-
         self.tabla.setRowCount(0)
         self.ips_detectadas.clear()
         self.numero_dispositivos.setText("0")
 
-
-
+    # INTEGRACIÓN CON JARVIS (Sin duplicados)
     def iniciar_jarvis(self):
         self.jarvis = JarvisWorker(palabra_activacion="jarvis")
         self.jarvis.comando_detectado.connect(self.ejecutar_comando_jarvis)
@@ -377,20 +307,27 @@ class MainWindow(QMainWindow):
         self.jarvis.start()
 
     def actualizar_estado_jarvis(self, mensaje: str):
-    
         self.statusBar().showMessage(mensaje)
 
     def ejecutar_comando_jarvis(self, accion: str, params: dict):
-        """Enruta las órdenes de voz hacia los métodos existentes de tus vistas."""
         if accion == "cambiar_panel":
             self.cambiar_panel(params["indice"])
 
         elif accion == "escanear_dispositivos":
-            self.cambiar_panel(1)  
+            self.cambiar_panel(1)
             self.panel_dispositivos.iniciar_escaneo()
+            if getattr(self.panel_dispositivos, "worker", None):
+                self.panel_dispositivos.worker.resultado_listo.connect(
+                    lambda disps: self.jarvis.hablar(
+                        f"Escaneo finalizado. Se encontraron {len(disps)} dispositivos"
+                    )
+                )
+                self.panel_dispositivos.worker.error_ocurrido.connect(
+                    lambda _: self.jarvis.hablar("Se ha producido un error en la operación")
+                )
 
         elif accion == "iniciar_sniffer":
-            self.cambiar_panel(0)  
+            self.cambiar_panel(0)
             if self.worker is None or not self.worker.isRunning():
                 self.iniciar_sniffer()
 
@@ -404,14 +341,38 @@ class MainWindow(QMainWindow):
         elif accion == "ejecutar_ssh":
             self.cambiar_panel(2)
             self.panel_ssh.enviar_comando()
+            self._conectar_error_worker(getattr(self.panel_ssh, "worker", None))
 
         elif accion == "ejecutar_telnet":
             self.cambiar_panel(3)
             self.panel_telnet.enviar_comando()
+            self._conectar_error_worker(getattr(self.panel_telnet, "worker", None))
 
         elif accion == "subir_ftp":
             self.cambiar_panel(4)
-            self.panel_ftp.iniciar_subida()    
+            self.panel_ftp.iniciar_subida()
+            self._conectar_error_worker(getattr(self.panel_ftp, "worker", None))
+
+    def _conectar_error_worker(self, worker):
+        """Hace que Jarvis avise por voz si SSH, Telnet o FTP devuelven False (error)."""
+        if worker is not None:
+            worker.resultado.connect(self._notificar_error_operacion, Qt.ConnectionType.UniqueConnection)
+
+    def _notificar_error_operacion(self, exito: bool, msg: str):
+        if not exito and hasattr(self, "jarvis"):
+            self.jarvis.hablar("Se ha producido un error en la operación")
+
+    def manejar_error_sniffer(self, mensaje_error: str):
+        if hasattr(self, "jarvis"):
+            self.jarvis.hablar("Se ha producido un error en la operación")
+
+        QMessageBox.critical(
+            self,
+            "Error de Captura",
+            f"No se pudo iniciar el sniffer:\n{mensaje_error}\n\n"
+            "Asegurate de ejecutar el programa como Administrador/root "
+            "y tener Npcap instalado."
+        )
 
     def closeEvent(self, event):
         if hasattr(self, "jarvis") and self.jarvis.isRunning():
