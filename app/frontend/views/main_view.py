@@ -46,12 +46,6 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.setStyleSheet(obtener_estilos())
 
-        self.worker = None
-        self.detener_evento = threading.Event()
-        self.ips_detectadas = set()
-
-        self.init_ui()
-        self.setStyleSheet(obtener_estilos())
 
         self.iniciar_jarvis()
 
