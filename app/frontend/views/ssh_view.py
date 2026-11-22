@@ -9,12 +9,15 @@ from app.backend.workers import NetworkWorker
 
 
 class SSHView(QWidget):
+
     def __init__(self):
         super().__init__()
+
         self.worker = None
         self.init_ui()
 
     def init_ui(self):
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(25, 25, 25, 25)
         layout.setSpacing(12)
@@ -104,6 +107,7 @@ class SSHView(QWidget):
         password = self.password.text()
         cmd = self.comando.text().strip()
 
+        # Validaciones
         if not all([host, usuario, cmd]):
             QMessageBox.warning(
                 self,
@@ -126,6 +130,7 @@ class SSHView(QWidget):
             f"$ {cmd}\nConectando a {host}:{puerto}..."
         )
 
+        # Crear worker
         self.worker = NetworkWorker(
             ejecutar_ssh,
             host,
@@ -135,6 +140,7 @@ class SSHView(QWidget):
             cmd
         )
 
+        # Conectar señales
         self.worker.resultado_listo.connect(
             self.mostrar_resultado
         )
@@ -172,3 +178,4 @@ class SSHView(QWidget):
     def finalizar_ejecucion(self):
 
         self.btn_ejecutar.setEnabled(True)
+        self.worker = None
