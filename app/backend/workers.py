@@ -1,3 +1,4 @@
+#workers.py
 from PySide6.QtCore import QThread, Signal
 
 

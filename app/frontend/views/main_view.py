@@ -1,3 +1,4 @@
+#main_view.py
 import threading
 
 from PySide6.QtWidgets import (
@@ -13,7 +14,8 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QTableWidgetItem,
     QMessageBox,
-    QStackedWidget
+    QStackedWidget,
+    QLineEdit,
 )
 from PySide6.QtCore import Qt
 
@@ -120,6 +122,8 @@ class MainWindow(QMainWindow):
 
         principal.addWidget(menu)
         principal.addWidget(self.paneles, 1)
+
+        
 
     def cambiar_panel(self, indice):
         self.paneles.setCurrentIndex(indice)
@@ -230,6 +234,19 @@ class MainWindow(QMainWindow):
         botones.addWidget(self.btn_escanear)
 
         layout.addLayout(botones)
+
+        prueba_layout = QHBoxLayout()
+        self.input_comando_texto = QLineEdit()
+        self.input_comando_texto.setPlaceholderText(
+            "Probar comando por texto (ej. 'jarvis abrir ssh', 'escanear dispositivos', 'iniciar tráfico')..."
+        )
+        self.btn_enviar_texto = QPushButton("Enviar comando")
+        self.btn_enviar_texto.clicked.connect(self._enviar_comando_por_texto)
+        self.input_comando_texto.returnPressed.connect(self._enviar_comando_por_texto)
+        
+        prueba_layout.addWidget(self.input_comando_texto)
+        prueba_layout.addWidget(self.btn_enviar_texto)
+        layout.addLayout(prueba_layout)
 
         return contenido
 
@@ -353,10 +370,12 @@ class MainWindow(QMainWindow):
             self.panel_ftp.iniciar_subida()
             self._conectar_error_worker(getattr(self.panel_ftp, "worker", None))
 
-    def _conectar_error_worker(self, worker):
-        """Hace que Jarvis avise por voz si SSH, Telnet o FTP devuelven False (error)."""
-        if worker is not None:
-            worker.resultado.connect(self._notificar_error_operacion, Qt.ConnectionType.UniqueConnection)
+    def _enviar_comando_por_texto(self):
+        texto = self.input_comando_texto.text().strip()
+        if texto and hasattr(self, "jarvis"):
+            self.jarvis.inyectar_texto(texto)
+            self.input_comando_texto.clear()
+
 
     def _notificar_error_operacion(self, exito: bool, msg: str):
         if not exito and hasattr(self, "jarvis"):
@@ -375,11 +394,11 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event):
-        if hasattr(self, "jarvis") and self.jarvis.isRunning():
-            self.jarvis.detener()
-
         if self.worker is not None and self.worker.isRunning():
             self.detener_evento.set()
             self.worker.wait(1500)
+
+        if hasattr(self, "jarvis") and self.jarvis.isRunning():
+            self.jarvis.detener()
 
         event.accept()

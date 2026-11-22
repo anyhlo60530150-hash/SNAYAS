@@ -4,4 +4,6 @@ __pycache__/
 .DS_Store
 .vscode
 venv/
-.venv/c
+.venv/
+tests/
+.tests/

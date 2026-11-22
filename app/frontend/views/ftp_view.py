@@ -3,8 +3,9 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QTextEdit, QPushButton, QComboBox, QFileDialog, QMessageBox
 )
-from app.backend.network_service import subir_archivo_ftp, subir_archivo_sftp
-from app.backend.workers import NetworkWorker
+
+from app.backend.workers import TaskWorker
+from app.backend.ftp_transfer import ejecutar_transferencia
 
 
 class FTPView(QWidget):
@@ -89,18 +90,19 @@ class FTPView(QWidget):
             self.puerto.setEnabled(True)
         else:  # FTP
             self.puerto.setText("21")
-            self.puerto.setEnabled(False)
+            self.puerto.setEnabled(True)
 
     def seleccionar_archivo(self):
         ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo para subir")
         if ruta:
             self.ruta_local.setText(ruta)
-            if not self.ruta_remota.text():
+            if not self.ruta_remota.text().strip():
                 self.ruta_remota.setText(f"/{os.path.basename(ruta)}")
 
     def iniciar_subida(self):
+        protocolo_idx = self.protocolo.currentIndex()
         host = self.ip.text().strip()
-        puerto = self.puerto.text().strip() or "22"
+        puerto_texto = self.puerto.text().strip() or ("22" if protocolo_idx == 0 else "21")
         usuario = self.usuario.text().strip()
         password = self.password.text()
         local = self.ruta_local.text().strip()
@@ -110,22 +112,45 @@ class FTPView(QWidget):
             QMessageBox.warning(self, "Faltan datos", "Completa host, usuario, archivo local y ruta remota.")
             return
 
+        if not os.path.isfile(local):
+            QMessageBox.warning(self, "Archivo no válido", "La ruta del archivo local no existe.")
+            return
+
+        try:
+            puerto = int(puerto_texto)
+            if not (1 <= puerto <= 65535):
+                raise ValueError
+        except ValueError:
+            QMessageBox.warning(self, "Puerto inválido", "El puerto debe ser un número entero entre 1 y 65535.")
+            return
+
+        if self.worker is not None and self.worker.isRunning():
+            QMessageBox.information(self, "Transferencia en curso", "Ya hay una subida en progreso.")
+            return
+
+        nombre_protocolo = "SFTP" if protocolo_idx == 0 else "FTP"
         self.btn_subir.setEnabled(False)
-        self.informacion.append(f"Subiendo '{os.path.basename(local)}' a {host}...")
+        self.informacion.append(f"[{nombre_protocolo}] Subiendo '{os.path.basename(local)}' a {host}:{puerto}...")
 
-        if self.protocolo.currentIndex() == 0:  # SFTP
-            self.worker = NetworkWorker(
-                subir_archivo_sftp, host, puerto, usuario, password, local, remota
-            )
-        else:  # FTP
-            self.worker = NetworkWorker(
-                subir_archivo_ftp, host, usuario, password, local, remota
-            )
-
-        self.worker.resultado.connect(self.mostrar_resultado)
+        self.worker = TaskWorker(
+            ejecutar_transferencia,
+            protocolo_idx,
+            host,
+            puerto,
+            usuario,
+            password,
+            local,
+            remota
+        )
+        self.worker.tarea_completada.connect(self.mostrar_resultado)
+        self.worker.finished.connect(self._limpiar_worker)
         self.worker.start()
 
-    def mostrar_resultado(self, exito, mensaje):
+    def _limpiar_worker(self):
+        self.btn_subir.setEnabled(True)
+        self.worker = None
+
+    def mostrar_resultado(self, exito: bool, mensaje: str):
         self.btn_subir.setEnabled(True)
         estado = "[OK]" if exito else "[ERROR]"
         self.informacion.append(f"{estado} {mensaje}")

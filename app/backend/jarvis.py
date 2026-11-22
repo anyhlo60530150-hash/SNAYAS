@@ -1,69 +1,137 @@
 import queue
 import speech_recognition as sr
 import pyttsx3
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, Slot, Qt
 
 
 class JarvisWorker(QThread):
     comando_detectado = Signal(str, dict)
     estado_cambiado = Signal(str)
+    _texto_inyectado = Signal(str)
 
-    def __init__(self, palabra_activacion="jarvis"):
+    def __init__(self, palabra_activacion="jarvis", escuchar_microfono=True):
         super().__init__()
         self.palabra_activacion = palabra_activacion.lower()
+        self.escuchar_microfono = escuchar_microfono
         self.activo = True
         self.cola_voz = queue.Queue()
-        self.engine = None  # Se inicializa dentro de run() para respetar el hilo
+        self.engine = None
+
+        self._texto_inyectado.connect(
+            self._procesar_texto_crudo,
+            Qt.ConnectionType.QueuedConnection,
+        )
+
+    @Slot(str)
+    def inyectar_texto(self, texto: str):
+        """Permite probar comandos enviando texto desde la UI o tests sin usar el micrófono."""
+        if texto and texto.strip():
+            self._texto_inyectado.emit(texto.strip().lower())
+
+    def _procesar_texto_crudo(self, texto: str):
+        """Procesa un texto como si viniera del reconocedor de voz."""
+        self.estado_cambiado.emit(f'Texto recibido: "{texto}"')
+
+        if self.palabra_activacion in texto:
+            orden = texto.split(self.palabra_activacion, 1)[1].strip()
+        else:
+            orden = texto.strip()
+
+        self.procesar_orden(orden)
 
     def hablar(self, texto: str):
-        """Encola un mensaje para que Jarvis lo diga sin bloquear la UI."""
-        self.cola_voz.put(texto)
+        """Encola un mensaje para que Jarvis lo diga en su hilo sin bloquear la UI."""
+        if texto and self.activo:
+            self.cola_voz.put(texto)
+
+    def _crear_motor_voz(self):
+        try:
+            engine = pyttsx3.init()
+            engine.setProperty("rate", 165)
+            return engine
+        except Exception as e:
+            self.estado_cambiado.emit(f"Error al iniciar motor de voz: {e}")
+            return None
 
     def _procesar_cola_voz(self):
         """Reproduce todos los mensajes pendientes en la cola dentro del hilo del worker."""
-        if self.engine is None:
-            return
-        while not self.cola_voz.empty():
+        while not self.cola_voz.empty() and self.activo:
             texto = self.cola_voz.get()
             self.estado_cambiado.emit(f"Jarvis: {texto}")
-            self.engine.say(texto)
-            self.engine.runAndWait()
+
+            if self.engine is None:
+                self.engine = self._crear_motor_voz()
+
+            if self.engine is None:
+                continue
+
+            try:
+                self.engine.say(texto)
+                self.engine.runAndWait()
+            except Exception as e:
+                self.estado_cambiado.emit(f"Error TTS: {e}")
+                # Reintentar recrear el motor una vez si SAPI5 falló
+                try:
+                    self.engine.stop()
+                except Exception:
+                    pass
+                self.engine = self._crear_motor_voz()
+                if self.engine is not None:
+                    try:
+                        self.engine.say(texto)
+                        self.engine.runAndWait()
+                    except Exception as e2:
+                        self.estado_cambiado.emit(f"Error TTS reintento: {e2}")
 
     def run(self):
-        # Inicializar motor de voz DENTRO del hilo secundario (Thread-Safe)
-        self.engine = pyttsx3.init()
-        self.engine.setProperty("rate", 165)
+        self.engine = self._crear_motor_voz()
 
         recognizer = sr.Recognizer()
-        mic = sr.Microphone()
+        recognizer.pause_threshold = 0.6
+        mic = None
 
-        try:
-            with mic as source:
-                recognizer.adjust_for_ambient_noise(source, duration=1)
-        except Exception as e:
-            self.estado_cambiado.emit(f"Error al calibrar micrófono: {e}")
-            return
+        if self.escuchar_microfono:
+            try:
+                mic = sr.Microphone()
+                with mic as source:
+                    recognizer.adjust_for_ambient_noise(source, duration=0.8)
+            except Exception as e:
+                self.estado_cambiado.emit(f"Micrófono no disponible ({e}). Modo texto activo.")
+                mic = None
 
-        # Saludo al iniciar el programa
         self.hablar("Sistema Jarvis iniciado. Estoy escuchando")
         self._procesar_cola_voz()
 
         while self.activo:
             self._procesar_cola_voz()
 
+            if not self.activo:
+                break
+
+            if not self.escuchar_microfono or mic is None:
+                self.msleep(100)
+                continue
+
             try:
                 with mic as source:
-                    audio = recognizer.listen(source, timeout=1, phrase_time_limit=6)
+                    audio = recognizer.listen(source, timeout=1, phrase_time_limit=5)
 
-                # Si se detuvo mientras escuchaba, salir sin procesar
+                if not self.activo:
+                    break
+
+                self._procesar_cola_voz()
                 if not self.activo:
                     break
 
                 texto = recognizer.recognize_google(audio, language="es-ES").lower()
 
+                if not self.activo:
+                    break
+
                 if self.palabra_activacion in texto:
                     orden = texto.split(self.palabra_activacion, 1)[1].strip()
                     self.procesar_orden(orden)
+                    self._procesar_cola_voz()
 
             except sr.WaitTimeoutError:
                 continue
@@ -72,16 +140,20 @@ class JarvisWorker(QThread):
             except sr.RequestError:
                 self.estado_cambiado.emit("Error: Sin conexión para reconocimiento de voz")
             except Exception as e:
-                self.estado_cambiado.emit(f"Error de audio: {e}")
+                if self.activo:
+                    self.estado_cambiado.emit(f"Error de audio: {e}")
 
-        # Despedida limpia dentro del mismo hilo al salir del bucle
-        self.engine.say("Cerrando asistente Jarvis")
-        self.engine.runAndWait()
+        # Limpieza al salir del bucle
+        if self.engine is not None:
+            try:
+                self.engine.stop()
+            except Exception:
+                pass
+            self.engine = None
 
     def procesar_orden(self, orden: str):
         if not orden:
             self.hablar("Te escucho, dime qué necesitas")
-            self._procesar_cola_voz()
             return
 
         # --- NAVEGACIÓN ---
@@ -139,9 +211,18 @@ class JarvisWorker(QThread):
         else:
             self.hablar("No he entendido la instrucción. Inténtalo nuevamente")
 
-        self._procesar_cola_voz()
-
     def detener(self):
-        """Señaliza el fin del hilo sin bloquear la interfaz gráfica."""
+        """Señaliza el fin del hilo y evita que quede colgado al cerrar la app."""
         self.activo = False
-        self.wait(2500)
+        with self.cola_voz.mutex:
+            self.cola_voz.queue.clear()
+
+        if self.engine is not None:
+            try:
+                self.engine.stop()
+            except Exception:
+                pass
+
+        if not self.wait(1500):
+            self.terminate()
+            self.wait(500)
